@@ -45,7 +45,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class DigitalWatchFace extends CanvasWatchFaceService {
     private static final Typeface NORMAL_TYPEFACE =
-            Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL);
+            Typeface.create(Typeface.DEFAULT, Typeface.NORMAL);
+    private static final Typeface BOLD_TYPEFACE =
+            Typeface.create(Typeface.DEFAULT, Typeface.BOLD);
 
     /**
      * Update rate in milliseconds for interactive mode. We update once a second since seconds are
@@ -76,13 +78,15 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
         boolean mRegisteredTimeZoneReceiver = false;
 
         Paint mBackgroundPaint;
-        Paint mTextPaint;
+        Paint mTextPaintNormal;
+        Paint mTextPaintBold;
 
         boolean mAmbient;
         Time mTime;
         int mTapCount;
 
-        float mXOffset;
+        float mXOffsetHour;
+        float mXOffsetMinute;
         float mYOffset;
 
         /**
@@ -107,8 +111,11 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(R.color.background));
 
-            mTextPaint = new Paint();
-            mTextPaint = createTextPaint(resources.getColor(R.color.digital_text));
+            mTextPaintNormal = new Paint();
+            mTextPaintNormal = createTextPaintNormal(resources.getColor(R.color.digital_text));
+
+            mTextPaintBold = new Paint();
+            mTextPaintBold = createTextPaintBold(resources.getColor(R.color.digital_text));
 
             mTime = new Time();
         }
@@ -119,10 +126,18 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
             super.onDestroy();
         }
 
-        private Paint createTextPaint(int textColor) {
+        private Paint createTextPaintNormal(int textColor) {
             Paint paint = new Paint();
             paint.setColor(textColor);
             paint.setTypeface(NORMAL_TYPEFACE);
+            paint.setAntiAlias(true);
+            return paint;
+        }
+
+        private Paint createTextPaintBold(int textColor) {
+            Paint paint = new Paint();
+            paint.setColor(textColor);
+            paint.setTypeface(BOLD_TYPEFACE);
             paint.setAntiAlias(true);
             return paint;
         }
@@ -170,12 +185,15 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
             // Load resources that have alternate values for round watches.
             Resources resources = DigitalWatchFace.this.getResources();
             boolean isRound = insets.isRound();
-            mXOffset = resources.getDimension(isRound
-                    ? R.dimen.digital_x_offset_round : R.dimen.digital_x_offset);
+            mXOffsetHour = resources.getDimension(isRound
+                    ? R.dimen.digital_x_offset_round_hour : R.dimen.digital_x_offset_hour);
+            mXOffsetMinute = resources.getDimension(isRound
+                    ? R.dimen.digital_x_offset_round_minute : R.dimen.digital_x_offset_minute);
             float textSize = resources.getDimension(isRound
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
 
-            mTextPaint.setTextSize(textSize);
+            mTextPaintNormal.setTextSize(textSize);
+            mTextPaintBold.setTextSize(textSize);
         }
 
         @Override
@@ -196,7 +214,8 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
             if (mAmbient != inAmbientMode) {
                 mAmbient = inAmbientMode;
                 if (mLowBitAmbient) {
-                    mTextPaint.setAntiAlias(!inAmbientMode);
+                    mTextPaintNormal.setAntiAlias(!inAmbientMode);
+                    mTextPaintBold.setAntiAlias(!inAmbientMode);
                 }
                 invalidate();
             }
@@ -241,9 +260,11 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
 
             // Draw H:MM in ambient mode or H:MM:SS in interactive mode.
             mTime.setToNow();
-            String text = String.format("%d:%02d", mTime.hour, mTime.minute);
+            String textHour = String.format("%d", mTime.hour);
+            String textMinute = String.format(":%02d", mTime.minute);
 //                    : String.format("%d:%02d:%02d", mTime.hour, mTime.minute, mTime.second);
-            canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
+            canvas.drawText(textHour, mXOffsetHour, mYOffset, mTextPaintBold);
+            canvas.drawText(textMinute, mXOffsetMinute, mYOffset, mTextPaintNormal);
         }
 
         /**
