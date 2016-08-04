@@ -29,11 +29,24 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.text.format.Time;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEvent;
+import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.DataItem;
+import com.google.android.gms.wearable.DataMap;
+import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.Wearable;
 
 import java.lang.ref.WeakReference;
 import java.util.TimeZone;
@@ -65,8 +78,20 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
         return new Engine();
     }
 
-    private class Engine extends CanvasWatchFaceService.Engine {
+    private class Engine extends CanvasWatchFaceService.Engine implements
+            DataApi.DataListener,
+            GoogleApiClient.ConnectionCallbacks,
+            GoogleApiClient.OnConnectionFailedListener {
+
+        private final String LOW_KEY = "key_low";
+        private final String HIGH_KEY = "key_high";
+        private final String WEATHERID_KEY = "key_weatherid";
+        private final String WEATHER_DATAMAP = "/weather";
         final Handler mUpdateTimeHandler = new EngineHandler(this);
+
+        private Double mLowTemp;
+        private Double mHighTemp;
+        private int mWeatherId;
 
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
@@ -88,6 +113,7 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
         float mXOffsetHour;
         float mXOffsetMinute;
         float mYOffset;
+        private GoogleApiClient mGoogleApiClient;
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -112,12 +138,18 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
             mBackgroundPaint.setColor(resources.getColor(R.color.background));
 
             mTextPaintNormal = new Paint();
-            mTextPaintNormal = createTextPaintNormal(resources.getColor(R.color.digital_text));
+            mTextPaintNormal = createTextPaint(resources.getColor(R.color.digital_text), NORMAL_TYPEFACE);
 
             mTextPaintBold = new Paint();
-            mTextPaintBold = createTextPaintBold(resources.getColor(R.color.digital_text));
+            mTextPaintBold = createTextPaint(resources.getColor(R.color.digital_text), BOLD_TYPEFACE);
 
             mTime = new Time();
+
+            mGoogleApiClient = new GoogleApiClient.Builder(DigitalWatchFace.this)
+                    .addApi(Wearable.API)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .build();
         }
 
         @Override
@@ -126,18 +158,10 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
             super.onDestroy();
         }
 
-        private Paint createTextPaintNormal(int textColor) {
+        private Paint createTextPaint(int textColor, Typeface typeface) {
             Paint paint = new Paint();
             paint.setColor(textColor);
-            paint.setTypeface(NORMAL_TYPEFACE);
-            paint.setAntiAlias(true);
-            return paint;
-        }
-
-        private Paint createTextPaintBold(int textColor) {
-            Paint paint = new Paint();
-            paint.setColor(textColor);
-            paint.setTypeface(BOLD_TYPEFACE);
+            paint.setTypeface(typeface);
             paint.setAntiAlias(true);
             return paint;
         }
@@ -148,12 +172,17 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
 
             if (visible) {
                 registerReceiver();
+                mGoogleApiClient.connect();
 
                 // Update time zone in case it changed while we weren't visible.
                 mTime.clear(TimeZone.getDefault().getID());
                 mTime.setToNow();
             } else {
                 unregisterReceiver();
+                if (mGoogleApiClient.isConnected() && mGoogleApiClient != null) {
+                    Wearable.DataApi.removeListener(mGoogleApiClient, this);
+                    mGoogleApiClient.disconnect();
+                }
             }
 
             // Whether the timer should be running depends on whether we're visible (as well as
@@ -262,9 +291,13 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
             mTime.setToNow();
             String textHour = String.format("%d", mTime.hour);
             String textMinute = String.format(":%02d", mTime.minute);
+            String textLowTemp = String.format("%d",mLowTemp);
+            Log.e("LowTemp:",String.valueOf(mLowTemp));
+            String textHighTemp = String.format("%s",mHighTemp);
 //                    : String.format("%d:%02d:%02d", mTime.hour, mTime.minute, mTime.second);
             canvas.drawText(textHour, mXOffsetHour, mYOffset, mTextPaintBold);
             canvas.drawText(textMinute, mXOffsetMinute, mYOffset, mTextPaintNormal);
+            canvas.drawText(textLowTemp,mXOffsetMinute,mYOffset+80,mTextPaintNormal);
         }
 
         /**
@@ -297,6 +330,49 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
                         - (timeMs % INTERACTIVE_UPDATE_RATE_MS);
                 mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
             }
+        }
+
+        @Override
+        public void onConnected(@Nullable Bundle bundle) {
+            Wearable.DataApi.addListener(mGoogleApiClient, this);
+
+        }
+
+        @Override
+        public void onConnectionSuspended(int i) {
+
+        }
+
+        @Override
+        public void onDataChanged(DataEventBuffer dataEventBuffer) {
+
+            Log.e("onDataChanged:", "New data");
+            for (DataEvent event : dataEventBuffer){
+                if (event.getType() == DataEvent.TYPE_CHANGED){
+                    DataItem dataItem = event.getDataItem();
+                    if (dataItem.getUri().getPath().compareTo("/weather") == 0){
+                        DataMap dataMap = DataMapItem.fromDataItem(dataItem).getDataMap();
+                        if (dataMap.containsKey(LOW_KEY)){
+                            mLowTemp = dataMap.getDouble(LOW_KEY);
+                            Log.e("Low Temp:",String.valueOf(mLowTemp));
+                        }
+                        if (dataMap.containsKey(HIGH_KEY)){
+                            mHighTemp = dataMap.getDouble(HIGH_KEY);
+//                            Log.d("High Temp:", mHighTemp);
+                        }
+                        if (dataMap.containsKey(WEATHERID_KEY)){
+                            mWeatherId = dataMap.getInt(WEATHERID_KEY);
+//                            Log.d("Weather ID:", mWeatherId);
+                        }
+                    }
+                    invalidate();
+                }
+            }
+        }
+
+        @Override
+        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
         }
     }
 
