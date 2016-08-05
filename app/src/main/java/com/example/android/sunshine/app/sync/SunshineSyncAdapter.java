@@ -39,7 +39,6 @@ import com.example.android.sunshine.app.data.WeatherContract;
 import com.example.android.sunshine.app.muzei.WeatherMuzeiSource;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.PutDataMapRequest;
@@ -105,6 +104,10 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
     private final String TIME_STAMP_KEY = "time";
     private GoogleApiClient mGoogleApiClient;
 
+    private double mLow;
+    private double mHigh;
+    private int mWeatherId;
+
     public SunshineSyncAdapter(Context context, boolean autoInitialize) {
         super(context, autoInitialize);
         if (mGoogleApiClient == null) {
@@ -114,6 +117,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                         public void onConnected(Bundle connectionHint) {
                             Log.d(TAG, "onConnected: " + connectionHint);
                             // Now you can use the Data Layer API
+//                            sendWeatherToWearable(mLow,mHigh,mWeatherId);
                         }
 
                         @Override
@@ -395,6 +399,9 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                 weatherValues.put(WeatherContract.WeatherEntry.COLUMN_WEATHER_ID, weatherId);
 
                 if (i == 0) {
+//                    mLow = low;
+//                    mHigh = high;
+//                    mWeatherId = weatherId;
                     sendWeatherToWearable(low, high, weatherId);
                 }
 
@@ -429,33 +436,34 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
 
     private void sendWeatherToWearable(double low, double high, int weatherId) {
 
-        if (mGoogleApiClient == null){
+        if (mGoogleApiClient == null) {
             return;
         }
 
         mGoogleApiClient.connect();
 
-        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/weather");
+        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/weather").setUrgent();
+        putDataMapRequest.getDataMap().putLong(TIME_STAMP_KEY, System.currentTimeMillis());
         putDataMapRequest.getDataMap().putDouble(LOW_KEY, low);
         putDataMapRequest.getDataMap().putDouble(HIGH_KEY, high);
         putDataMapRequest.getDataMap().putInt(WEATHERID_KEY, weatherId);
-        putDataMapRequest.getDataMap().putLong(TIME_STAMP_KEY,System.currentTimeMillis());
 
+
+        Log.d("Low::Temp::", String.valueOf(low));
         PutDataRequest putDataRequest = putDataMapRequest.asPutDataRequest();
         putDataRequest.setUrgent();
 
-        PendingResult<DataApi.DataItemResult> pendingResult =
-                Wearable.DataApi.putDataItem(mGoogleApiClient, putDataRequest);
-        pendingResult.setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
-            @Override
-            public void onResult(@NonNull DataApi.DataItemResult dataItemResult) {
-                if (dataItemResult.getStatus().isSuccess()) {
-                    Log.d(TAG, "Data to wearable sent");
-                } else {
-                    Log.d(TAG, "Data to wearable not sent");
-                }
-            }
-        });
+        Wearable.DataApi.putDataItem(mGoogleApiClient, putDataRequest)
+                .setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
+                    @Override
+                    public void onResult(@NonNull DataApi.DataItemResult dataItemResult) {
+                        if (dataItemResult.getStatus().isSuccess()) {
+                            Log.d(TAG, "Data to wearable sent");
+                        } else {
+                            Log.d(TAG, "Data to wearable not sent");
+                        }
+                    }
+                });
     }
 
     private void updateWidgets() {

@@ -186,6 +186,13 @@
             android:name=".gcm.RegistrationIntentService"
             android:exported="false" >
         </service>
+        <service
+            android:name=".wear.SunshineWatchFaceListener">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.BIND_LISTENER" />
+                <!--<action android:name="com.google.android.gms.wearable.DATA_CHANGED" />-->
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>
