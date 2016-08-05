@@ -95,6 +95,7 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
         private final String HIGH_KEY = "key_high";
         private final String WEATHERID_KEY = "key_weatherid";
         private final String WEATHER_DATAMAP = "/weather";
+        private final String WEATHER_REQUEST = "/weather_request";
         private final String ASSET_KEY = "key_asset";
         private final int TIMEOUT_MS = 1000;
         final Handler mUpdateTimeHandler = new EngineHandler(this);
@@ -152,11 +153,6 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
                     .setAcceptsTapEvents(true)
                     .build());
             Resources resources = DigitalWatchFace.this.getResources();
-            mYOffsetClock = resources.getDimension(R.dimen.digital_y_offset_clock);
-            mYOffsetTemperature = resources.getDimension(R.dimen.digital_y_offset_temperature_round);
-            mXOffsetHigh = resources.getDimension(R.dimen.digital_x_offset_high_temperature_round);
-            mXOffsetLow = resources.getDimension(R.dimen.digital_x_offset_low_temperature_round);
-
 
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(R.color.background));
@@ -252,8 +248,15 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
                     ? R.dimen.digital_x_offset_round_minute : R.dimen.digital_x_offset_minute);
             float textSize = resources.getDimension(isRound
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
-            mXOffsetBitmap = resources.getDimension(R.dimen.digital_x_offset_bitmap_round);
+            mXOffsetBitmap = resources.getDimension(isRound
+                    ? R.dimen.digital_x_offset_bitmap_round:R.dimen.digital_x_offset_bitmap);
             mYOffsetBitmap = resources.getDimension(R.dimen.digital_y_offset_bitmap_round);
+            mYOffsetClock = resources.getDimension(R.dimen.digital_y_offset_clock);
+            mYOffsetTemperature = resources.getDimension(R.dimen.digital_y_offset_temperature_round);
+            mXOffsetHigh = resources.getDimension(isRound
+                    ? R.dimen.digital_x_offset_high_temperature_round:R.dimen.digital_x_offset_high_temperature);
+            mXOffsetLow = resources.getDimension(isRound
+                    ? R.dimen.digital_x_offset_low_temperature_round:R.dimen.digital_x_offset_low_temperature);
 
 
             mTextPaintNormal.setTextSize(textSize);
@@ -409,7 +412,7 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
         }
 
         public void requestWeatherInfo() {
-            PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/weather_request").setUrgent();
+            PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(WEATHER_REQUEST).setUrgent();
             putDataMapRequest.getDataMap().putLong(TIME_STAMP_KEY, System.currentTimeMillis());
 
             PutDataRequest putDataRequest = putDataMapRequest.asPutDataRequest();
@@ -440,7 +443,7 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
             for (DataEvent event : dataEventBuffer) {
                 if (event.getType() == DataEvent.TYPE_CHANGED) {
                     DataItem dataItem = event.getDataItem();
-                    if (dataItem.getUri().getPath().compareTo("/weather") == 0) {
+                    if (dataItem.getUri().getPath().compareTo(WEATHER_DATAMAP) == 0) {
                         DataMap dataMap = DataMapItem.fromDataItem(dataItem).getDataMap();
                         if (dataMap.containsKey(LOW_KEY)) {
                             mLowTemp = dataMap.getDouble(LOW_KEY);

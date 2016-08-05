@@ -12,11 +12,12 @@ import com.google.android.gms.wearable.WearableListenerService;
  */
 public class SunshineWatchFaceListener extends WearableListenerService {
 
+    private final String WEATHER_REQUEST = "/weather_request";
     @Override
     public void onDataChanged(DataEventBuffer dataEvents) {
         for (DataEvent dataEvent:dataEvents){
             if (dataEvent.getType() == DataEvent.TYPE_CHANGED){
-                if (dataEvent.getDataItem().getUri().getPath().compareTo("/weather_request") == 0){
+                if (dataEvent.getDataItem().getUri().getPath().compareTo(WEATHER_REQUEST) == 0){
                     Log.d("WearListener:", "Ondatachanged");
                     SunshineSyncAdapter.syncImmediately(this);
                 }
