@@ -6,5 +6,11 @@
     <dimen name="digital_x_offset_minute">65dp</dimen>
     <dimen name="digital_x_offset_round_hour">50dp</dimen>
     <dimen name="digital_x_offset_round_minute">100dp</dimen>
-    <dimen name="digital_y_offset">90dp</dimen>
+    <dimen name="digital_y_offset_clock">90dp</dimen>
+    <dimen name="digital_y_offset_temperature_round">130dp</dimen>
+    <dimen name="digital_y_offset_bitmap_round">100dp</dimen>
+    <dimen name="digital_x_offset_high_temperature_round">85dp</dimen>
+    <dimen name="digital_x_offset_low_temperature_round">130dp</dimen>
+    <dimen name="digital_x_offset_bitmap_round">40dp</dimen>
+    <dimen name="weather_icon_size">40dp</dimen>
 </resources>

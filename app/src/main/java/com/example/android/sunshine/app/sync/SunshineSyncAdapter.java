@@ -40,6 +40,7 @@ import com.example.android.sunshine.app.muzei.WeatherMuzeiSource;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
@@ -50,6 +51,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -99,7 +101,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
     private final String TAG = "GoogleApiClient :";
     private final String LOW_KEY = "key_low";
     private final String HIGH_KEY = "key_high";
-    private final String WEATHERID_KEY = "key_weatherid";
+    private final String ASSET_KEY = "key_asset";
     private final String WEATHER_DATAMAP = "/weather";
     private final String TIME_STAMP_KEY = "time";
     private GoogleApiClient mGoogleApiClient;
@@ -442,11 +444,15 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
 
         mGoogleApiClient.connect();
 
+        Bitmap bitmap = BitmapFactory.decodeResource(getContext().getResources(),
+                Utility.getArtResourceForWeatherCondition(weatherId));
+        Asset asset = createAssetFromBitmap(bitmap);
+
         PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/weather").setUrgent();
         putDataMapRequest.getDataMap().putLong(TIME_STAMP_KEY, System.currentTimeMillis());
         putDataMapRequest.getDataMap().putDouble(LOW_KEY, low);
         putDataMapRequest.getDataMap().putDouble(HIGH_KEY, high);
-        putDataMapRequest.getDataMap().putInt(WEATHERID_KEY, weatherId);
+        putDataMapRequest.getDataMap().putAsset(ASSET_KEY, asset);
 
 
         Log.d("Low::Temp::", String.valueOf(low));
@@ -466,6 +472,11 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                 });
     }
 
+    private Asset createAssetFromBitmap(Bitmap bitmap) {
+        final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteStream);
+        return Asset.createFromBytes(byteStream.toByteArray());
+    }
     private void updateWidgets() {
         Context context = getContext();
         // Setting the package ensures that only components in our app will receive the broadcast
