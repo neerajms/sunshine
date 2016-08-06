@@ -98,7 +98,7 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
         private final String WEATHER_REQUEST = "/weather_request";
         private final String ASSET_KEY = "key_asset";
         private final int TIMEOUT_MS = 1000;
-        final Handler mUpdateTimeHandler = new EngineHandler(this);
+        private final Handler mUpdateTimeHandler = new EngineHandler(this);
 
         private Bitmap mWeatherIcon;
         private Double mLowTemp;
@@ -107,40 +107,40 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
         private final String TAG = "CanvasWatchService:";
 
         private final String TIME_STAMP_KEY = "time_stamp";
-        final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
+        public final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 mTime.clear(intent.getStringExtra("time-zone"));
                 mTime.setToNow();
             }
         };
-        boolean mRegisteredTimeZoneReceiver = false;
+        private boolean mRegisteredTimeZoneReceiver = false;
 
-        Paint mBackgroundPaint;
-        Paint mTextPaintNormal;
-        Paint mTextPaintBold;
-        Paint mTextPaintTemperature;
-        Paint mBitmapPaint;
+        private Paint mBackgroundPaint;
+        private Paint mTextPaintNormal;
+        private Paint mTextPaintBold;
+        private Paint mTextPaintTemperature;
+        private Paint mBitmapPaint;
 
-        boolean mAmbient;
-        Time mTime;
-        int mTapCount;
+        private boolean mAmbient;
+        private Time mTime;
+        private int mTapCount;
 
-        float mXOffsetHour;
-        float mXOffsetMinute;
-        float mYOffsetClock;
-        float mXOffsetLow;
-        float mXOffsetHigh;
-        float mYOffsetTemperature;
-        float mXOffsetBitmap;
-        float mYOffsetBitmap;
+        private float mXOffsetHour;
+        private float mXOffsetMinute;
+        private float mYOffsetClock;
+        private float mXOffsetLow;
+        private float mXOffsetHigh;
+        private float mYOffsetTemperature;
+        private float mXOffsetBitmap;
+        private float mYOffsetBitmap;
         private GoogleApiClient mGoogleApiClient;
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
          * disable anti-aliasing in ambient mode.
          */
-        boolean mLowBitAmbient;
+        private boolean mLowBitAmbient;
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -249,15 +249,14 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
             float textSize = resources.getDimension(isRound
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
             mXOffsetBitmap = resources.getDimension(isRound
-                    ? R.dimen.digital_x_offset_bitmap_round:R.dimen.digital_x_offset_bitmap);
+                    ? R.dimen.digital_x_offset_bitmap_round : R.dimen.digital_x_offset_bitmap);
             mYOffsetBitmap = resources.getDimension(R.dimen.digital_y_offset_bitmap_round);
             mYOffsetClock = resources.getDimension(R.dimen.digital_y_offset_clock);
             mYOffsetTemperature = resources.getDimension(R.dimen.digital_y_offset_temperature_round);
             mXOffsetHigh = resources.getDimension(isRound
-                    ? R.dimen.digital_x_offset_high_temperature_round:R.dimen.digital_x_offset_high_temperature);
+                    ? R.dimen.digital_x_offset_high_temperature_round : R.dimen.digital_x_offset_high_temperature);
             mXOffsetLow = resources.getDimension(isRound
-                    ? R.dimen.digital_x_offset_low_temperature_round:R.dimen.digital_x_offset_low_temperature);
-
+                    ? R.dimen.digital_x_offset_low_temperature_round : R.dimen.digital_x_offset_low_temperature);
 
             mTextPaintNormal.setTextSize(textSize);
             mTextPaintBold.setTextSize(textSize);
@@ -292,30 +291,6 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
             updateTimer();
         }
 
-        /**
-         * Captures tap event (and tap type) and toggles the background color if the user finishes
-         * a tap.
-         */
-        @Override
-        public void onTapCommand(int tapType, int x, int y, long eventTime) {
-            Resources resources = DigitalWatchFace.this.getResources();
-            switch (tapType) {
-                case TAP_TYPE_TOUCH:
-                    // The user has started touching the screen.
-                    break;
-                case TAP_TYPE_TOUCH_CANCEL:
-                    // The user has started a different gesture or otherwise cancelled the tap.
-                    break;
-                case TAP_TYPE_TAP:
-                    // The user has completed the tap gesture.
-                    mTapCount++;
-                    mBackgroundPaint.setColor(resources.getColor(mTapCount % 2 == 0 ?
-                            R.color.background : R.color.background2));
-                    break;
-            }
-            invalidate();
-        }
-
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
             // Draw the background.
@@ -330,23 +305,18 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
             String textHour = String.format("%02d", mTime.hour);
             String textMinute = String.format(":%02d", mTime.minute);
             if (mLowTemp != null) {
-                String textLowTemp = String.format("%2.0f", mLowTemp) + (char) 0x00B0;
+                String textLowTemp = String.format("%.0f", mLowTemp) + (char) 0x00B0;
                 canvas.drawText(textLowTemp, mXOffsetLow, mYOffsetTemperature, mTextPaintTemperature);
             }
-            Log.e("LowTemp:", String.valueOf(mLowTemp));
-            if (mHighTemp !=null) {
-                String textHighTemp = String.format("%2.0f", mHighTemp) + (char) 0x00B0;
+            if (mHighTemp != null) {
+                String textHighTemp = String.format("%.0f", mHighTemp) + (char) 0x00B0;
                 canvas.drawText(textHighTemp, mXOffsetHigh, mYOffsetTemperature, mTextPaintTemperature);
             }
             if (mWeatherIcon != null && !isInAmbientMode()) {
-//                Bitmap weatherConditionBitmap = loadBitmapFromAsset(mAsset);
                 canvas.drawBitmap(mWeatherIcon, mXOffsetBitmap, mYOffsetBitmap, mBitmapPaint);
-
             }
-//                    : String.format("%d:%02d:%02d", mTime.hour, mTime.minute, mTime.second);
             canvas.drawText(textHour, mXOffsetHour, mYOffsetClock, mTextPaintBold);
             canvas.drawText(textMinute, mXOffsetMinute, mYOffsetClock, mTextPaintNormal);
-
         }
 
         public Bitmap loadBitmapFromAsset(Asset asset) {
@@ -404,11 +374,8 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
 
         @Override
         public void onConnected(@Nullable Bundle bundle) {
-            Log.e("Watch::", "connected");
             Wearable.DataApi.addListener(mGoogleApiClient, this);
-
             requestWeatherInfo();
-
         }
 
         public void requestWeatherInfo() {
@@ -438,8 +405,6 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
 
         @Override
         public void onDataChanged(DataEventBuffer dataEventBuffer) {
-
-            Log.e("onDataChanged:", "New data");
             for (DataEvent event : dataEventBuffer) {
                 if (event.getType() == DataEvent.TYPE_CHANGED) {
                     DataItem dataItem = event.getDataItem();
@@ -447,16 +412,13 @@ public class DigitalWatchFace extends CanvasWatchFaceService {
                         DataMap dataMap = DataMapItem.fromDataItem(dataItem).getDataMap();
                         if (dataMap.containsKey(LOW_KEY)) {
                             mLowTemp = dataMap.getDouble(LOW_KEY);
-                            Log.e("Low Temp:", String.valueOf(mLowTemp));
                         }
                         if (dataMap.containsKey(HIGH_KEY)) {
                             mHighTemp = dataMap.getDouble(HIGH_KEY);
-//                            Log.d("High Temp:", mHighTemp);
                         }
                         if (dataMap.containsKey(ASSET_KEY)) {
                             mAsset = dataMap.getAsset(ASSET_KEY);
                             new GetBitmap().execute(mAsset);
-//                            Log.d("Weather ID:", mWeatherId);
                         }
                     }
                     invalidate();

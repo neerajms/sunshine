@@ -106,10 +106,6 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
     private final String TIME_STAMP_KEY = "time";
     private GoogleApiClient mGoogleApiClient;
 
-    private double mLow;
-    private double mHigh;
-    private int mWeatherId;
-
     public SunshineSyncAdapter(Context context, boolean autoInitialize) {
         super(context, autoInitialize);
         if (mGoogleApiClient == null) {
@@ -119,7 +115,6 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                         public void onConnected(Bundle connectionHint) {
                             Log.d(TAG, "onConnected: " + connectionHint);
                             // Now you can use the Data Layer API
-//                            sendWeatherToWearable(mLow,mHigh,mWeatherId);
                         }
 
                         @Override
@@ -401,9 +396,6 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                 weatherValues.put(WeatherContract.WeatherEntry.COLUMN_WEATHER_ID, weatherId);
 
                 if (i == 0) {
-//                    mLow = low;
-//                    mHigh = high;
-//                    mWeatherId = weatherId;
                     sendWeatherToWearable(low, high, weatherId);
                 }
 
@@ -454,8 +446,6 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
         putDataMapRequest.getDataMap().putDouble(HIGH_KEY, high);
         putDataMapRequest.getDataMap().putAsset(ASSET_KEY, asset);
 
-
-        Log.d("Low::Temp::", String.valueOf(low));
         PutDataRequest putDataRequest = putDataMapRequest.asPutDataRequest();
         putDataRequest.setUrgent();
 
@@ -477,6 +467,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteStream);
         return Asset.createFromBytes(byteStream.toByteArray());
     }
+
     private void updateWidgets() {
         Context context = getContext();
         // Setting the package ensures that only components in our app will receive the broadcast
